@@ -1,0 +1,3 @@
+[submodule "cantcoap"]
+	path = cantcoap
+	url = https://github.com/staropram/cantcoap.git
