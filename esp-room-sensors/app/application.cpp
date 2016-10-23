@@ -116,9 +116,9 @@ void init() {
 	dht.begin();
 	Wire.begin();
 	bmp = BMP180();
-  if (bmp.EnsureConnected()) {
-    bmp.SoftReset();
-    bmp.Initialize();
+	if (bmp.EnsureConnected()) {
+		bmp.SoftReset();
+		bmp.Initialize();
 	}
 	WifiStation.enable(true, false);
 	WifiStation.config(WIFI_SSID, WIFI_PASS);
