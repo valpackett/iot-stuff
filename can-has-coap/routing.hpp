@@ -1,3 +1,4 @@
+#pragma once
 #include <cstring>
 #include <cstdlib>
 
@@ -14,11 +15,11 @@ class RouteNode {
 		virtual ~RouteNode() {};
 		virtual bool match(char **url, char ***captures, size_t *ncaptures) = 0;
 		const char *uid;
-		RouteNode **children = NULL;
+		RouteNode **children = nullptr;
 		size_t nchildren = 0;
 		Handler<Req> handler = 0;
 		void debugPrint(int level = 0) {
-			debugf("%d %s", level, this->uid);
+			debugf("%d %s\t\t%p", level, this->uid, this->handler);
 			for (size_t i = 0; i < this->nchildren; i++) {
 				RouteNode<Req> *child = this->children[i];
 				child->debugPrint(level + 1);
@@ -143,7 +144,7 @@ class CoapRouter {
 		void handle(Req &request, char* url) {
 			debugf("handling %s", url);
 			char **murl = &url;
-			char **captures = NULL;
+			char **captures = nullptr;
 			size_t ncaptures = 0;
 			RouteNode<Req> *cur_node = &this->root;
 loop:
@@ -153,10 +154,10 @@ loop:
 					goto loop;
 				}
 			}
-			if (cur_node->handler != NULL) {
+			if (cur_node->handler != nullptr) {
 				debugf("Calling matched handler uid %s", cur_node->uid);
 				cur_node->handler(request, captures, ncaptures);
-			} else if (this->not_found != NULL) {
+			} else if (this->not_found != nullptr) {
 				debugf("Calling not found handler");
 				this->not_found(request, captures, ncaptures);
 			} else {

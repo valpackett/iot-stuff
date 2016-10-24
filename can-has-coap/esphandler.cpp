@@ -12,8 +12,12 @@ void CoapServer::on_receive(UdpConnection& connection, char *data, int size, IPA
 		if (reqPDU->getURI(uriBuffer, URI_LEN, &recvURILen) != 0) {
 			debugf("Error retrieving URI");
 		}
+		CoapReqCtx ctx(reqPDU, &respPDU, remoteIP, remotePort);
 		if (recvURILen == 0) {
 			debugf("No URI associated with this CoAP PDU");
+			if (ackRstHandler != nullptr) ackRstHandler(ctx);
+			delete reqPDU;
+			return;
 		} else {
 			debugf("Valid request for %s", uriBuffer);
 			respPDU.reset();
@@ -34,7 +38,6 @@ void CoapServer::on_receive(UdpConnection& connection, char *data, int size, IPA
 				default:
 					break;
 			};
-			CoapReqCtx ctx(reqPDU, &respPDU);
 			this->routes.handle(ctx, uriBuffer + 1);
 		}
 		connection.sendTo(remoteIP, remotePort, (const char*)respPDU.getPDUPointer(), respPDU.getPDULength());

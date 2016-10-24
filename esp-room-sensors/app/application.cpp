@@ -4,6 +4,8 @@
 #include <Libraries/DHT/DHT.h>
 #include <Libraries/BMP180/BMP180.h>
 #include <esphandler.hpp>
+#include <espinfo.hpp>
+#include <observable.hpp>
 #include <wifi.h>
 
 #define DHT_PIN 4   // GPIO4  // D2
@@ -11,9 +13,11 @@
 #define DEBUG_PINS \
 	for (int i = 0; i < 16; i++) debugf("PIN %d %d", i, digitalRead(i));
 
-DHT dht(DHT_PIN, DHT22);
-BMP180 bmp;
+DHT dht(DHT_PIN, DHT22, 15); // 3rd arg is timing fix https://www.reddit.com/r/esp8266/comments/4nvgce/dht22_too_slow/d48r482/
+BMP180 bmp; // Still better to get temperature off the BMP
 CoapServer srv;
+Timer pirTimer;
+bool lastPirState = false, curPirState = false;
 
 void handle_dht(CoapReqCtx &ctx, char **captures, size_t ncaptures) {
 	char payload[128] = { 0 };
@@ -56,6 +60,8 @@ void handle_bmp(CoapReqCtx &ctx, char **captures, size_t ncaptures) {
 	}
 }
 
+void update_pir();
+
 void handle_pir(CoapReqCtx &ctx, char **captures, size_t ncaptures) {
 	char payload[128] = { 0 };
 	if (ctx.req->getCode() != CoapPDU::COAP_GET) return;
@@ -63,7 +69,8 @@ void handle_pir(CoapReqCtx &ctx, char **captures, size_t ncaptures) {
 	ctx.resp->setContentFormat(CoapPDU::COAP_CONTENT_FORMAT_APP_JSON);
 	StaticJsonBuffer<128> jbuf;
 	JsonObject& json = jbuf.createObject();
-	json["presence"] = digitalRead(PIR_PIN) == HIGH;
+	update_pir();
+	json["motion"] = curPirState;
 	json.printTo(payload, sizeof(payload));
 	ctx.resp->setPayload((uint8_t*)&payload, strlen(payload));
 }
@@ -73,7 +80,7 @@ void handle_core(CoapReqCtx &ctx, char **captures, size_t ncaptures) {
 		constexpr char *payload = (char*)(
 				 "</sensors/dht>;if=\"sensor\";rt=\"temperature-c humidity-percent\""
 				",</sensors/bmp>;if=\"sensor\";rt=\"pressure-pa temperature-c\""
-				",</sensors/pir>;if=\"sensor\";rt=\"presence\""
+				",</sensors/pir>;if=\"sensor\";rt=\"motion\""
 		);
 		constexpr size_t payload_len = strlen(payload);
 		ctx.resp->setCode(CoapPDU::COAP_CONTENT);
@@ -96,14 +103,29 @@ void on_receive(UdpConnection& connection, char *data, int size, IPAddress remot
 	srv.on_receive(udp, data, size, remoteIP, remotePort);
 }
 
+void update_pir() {
+	lastPirState = curPirState;
+	curPirState = digitalRead(PIR_PIN) == HIGH;
+	if (lastPirState != curPirState) {
+		Observable<udp, handle_pir>::notify();
+	}
+}
+
+void handle_obs_ack_rst(CoapReqCtx &ctx) {
+	Observable<udp, handle_pir>::handleAckOrRst(ctx);
+}
+
 void on_connected() {
 	srv.routes.not_found = handle_not_found;
 	srv.routes / ".well-known" / "core" = handle_core;
 	srv.routes / "sensors" / "dht" = handle_dht;
 	srv.routes / "sensors" / "bmp" = handle_bmp;
-	srv.routes / "sensors" / "pir" = handle_pir;
+	srv.routes / "sensors" / "pir" = &Observable<udp, handle_pir>::handler;
+	srv.routes / "info" = handle_espinfo;
+	srv.ackRstHandler = handle_obs_ack_rst;
 	srv.routes.debugPrint();
 	udp.listen(5683);
+	pirTimer.initializeMs(250, update_pir).start();
 	Serial.println("Server started");
 }
 
