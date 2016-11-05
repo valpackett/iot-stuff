@@ -91,6 +91,7 @@ void init() {
 	Serial.systemDebugOutput(true);
 	delay(1200);
 	WifiStation.enable(true, false);
+	WifiStation.setHostname("esp-plant-sensors");
 	WifiStation.config(WIFI_SSID, WIFI_PASS);
 	WifiStation.waitConnection(on_connected);
 }

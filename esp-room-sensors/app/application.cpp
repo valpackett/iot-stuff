@@ -143,6 +143,7 @@ void init() {
 		bmp.Initialize();
 	}
 	WifiStation.enable(true, false);
+	WifiStation.setHostname("esp-room-sensors");
 	WifiStation.config(WIFI_SSID, WIFI_PASS);
 	WifiStation.waitConnection(on_connected);
 }
