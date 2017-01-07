@@ -3,7 +3,7 @@
 ## Uncomment and change examples:
 
 ## Add your source directories here separated by space
-MODULES = app ../fixes ../cantcoap ../can-has-coap ../common
+MODULES = app ../fixes ../cantcoap ../can-has-coap ../mq2 ../common
 # EXTRA_INCDIR = include
 
 # ESP_HOME = c:/Espressif

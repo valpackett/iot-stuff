@@ -1,3 +1,6 @@
 [submodule "cantcoap"]
-	path = cantcoap
+	path = esp8266/cantcoap
 	url = https://github.com/staropram/cantcoap.git
+[submodule "mq2"]
+	path = esp8266/mq2
+	url = https://github.com/xerlay11/MQ-2-sensor-library.git
